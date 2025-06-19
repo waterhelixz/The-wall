@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>VoidForum</title>
+  <meta charset="UTF-8">
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      font-family: monospace;
+      background: #111;
+      color: #eee;
+      height: 100%;
+      overflow: hidden;
+    }
+    #container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      padding: 10px;
+    }
+    #log {
+      flex: 1;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      border: 1px solid #444;
+      padding: 10px;
+      background: #000;
+      margin-bottom: 10px;
+    }
+    #form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    input, button {
+      background: #222;
+      color: #eee;
+      border: 1px solid #444;
+      padding: 5px;
+    }
+    .post {
+      margin-bottom: 10px;
+    }
+    .timestamp {
+      float: right;
+      color: #888;
+    }
+    img {
+      max-width: 100%;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="log">Connecting to VoidForum...</div>
+    <div id="form">
+      <input id="nickname" placeholder="nickname (optional)">
+      <input id="message" placeholder="message">
+      <input type="file" id="imageInput" accept="image/*">
+      <button onclick="send()">Post</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const postsRef = ref(db, "posts");
+
+    const log = document.getElementById("log");
+    const msgInput = document.getElementById("message");
+    const nickInput = document.getElementById("nickname");
+    const imageInput = document.getElementById("imageInput");
+
+    function formatTime() {
+      const now = new Date();
+      return now.toLocaleTimeString("en-GB", { hour12: false });
+    }
+
+    function send() {
+      const msg = msgInput.value.trim();
+      const nick = nickInput.value.trim() || "anon";
+      const time = formatTime();
+
+      if (!msg && !imageInput.files[0]) return;
+
+      if (imageInput.files[0]) {
+        const formData = new FormData();
+        formData.append("file", imageInput.files[0]);
+        formData.append("upload_preset", "ml_default"); // dummy preset
+        fetch("https://api.imgbb.com/1/upload?key=YOUR_IMGBB_API_KEY", {
+          method: "POST",
+          body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+          push(postsRef, { nick, msg, time, img: data.data.url });
+        });
+      } else {
+        push(postsRef, { nick, msg, time });
+      }
+
+      msgInput.value = "";
+      imageInput.value = "";
+    }
+
+    onChildAdded(postsRef, (snap) => {
+      const { nick, msg, time, img } = snap.val();
+      const div = document.createElement("div");
+      div.className = "post";
+      div.innerHTML = `<span><b>${nick}</b>: ${msg || ""}<span class="timestamp">${time}</span></span>` +
+                      (img ? `<br><img src="${img}">` : "");
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+    });
+
+    msgInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        send();
+      }
+    });
+  </script>
+</body>
+</html>
