@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>VoidForum</title>
+  <title>The Wall</title>
   <meta charset="UTF-8">
   <style>
     html, body {
@@ -30,13 +30,15 @@
     #form {
       display: flex;
       flex-wrap: wrap;
-      gap: 5px;
+      gap: 10px;
     }
-    input, button {
+    #form input, #form button {
+      flex: 1 1 200px;
+      padding: 10px;
+      font-size: 16px;
       background: #222;
       color: #eee;
       border: 1px solid #444;
-      padding: 5px;
     }
     .post {
       margin-bottom: 10px;
@@ -53,7 +55,7 @@
 </head>
 <body>
   <div id="container">
-    <div id="log">Connecting to VoidForum...</div>
+    <div id="log">Connecting to The Wall...</div>
     <div id="form">
       <input id="nickname" placeholder="nickname (optional)">
       <input id="message" placeholder="message">
@@ -99,8 +101,7 @@
 
       if (imageInput.files[0]) {
         const formData = new FormData();
-        formData.append("file", imageInput.files[0]);
-        formData.append("upload_preset", "ml_default"); // dummy preset
+        formData.append("image", imageInput.files[0]);
         fetch("https://api.imgbb.com/1/upload?key=YOUR_IMGBB_API_KEY", {
           method: "POST",
           body: formData
@@ -117,6 +118,13 @@
       imageInput.value = "";
     }
 
+    msgInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        send();
+      }
+    });
+
     onChildAdded(postsRef, (snap) => {
       const { nick, msg, time, img } = snap.val();
       const div = document.createElement("div");
@@ -125,13 +133,6 @@
                       (img ? `<br><img src="${img}">` : "");
       log.appendChild(div);
       log.scrollTop = log.scrollHeight;
-    });
-
-    msgInput.addEventListener("keydown", e => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        send();
-      }
     });
   </script>
 </body>
